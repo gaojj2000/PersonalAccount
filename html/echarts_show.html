@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>数据面板</title>
+		<link rel="stylesheet" href="css/layui.css" />
+		<link rel="stylesheet" href="css/modules/layer/default/layer.css" />
+		<link rel="stylesheet" href="css/modules/laydate/default/laydate.css" />
+		<style>
+			html, body {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				padding: 0;
+			}
+			
+			#main{
+				width: 100%;
+				height: 100%;
+			}
+
+			.layui-form-item {
+				width: 400px;
+				padding: 20px;
+				margin: 0 auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div style="width: 100%;height: 100%;position: relative;padding-top: 78px;padding-bottom: 44px;box-sizing: border-box;">
+			<div style="margin-top: -78px;height: 78px;">
+				<div class="layui-form-item">
+					<label class="layui-form-label" id="text">周尾选择</label>
+					<div class="layui-input-inline" style="margin: 0;">
+						<input type="text" class="layui-input" id="choose" placeholder="yyyy-MM-dd" autocomplete="off">
+					</div>
+				</div>
+			</div>
+			<div id="main"></div>
+		</div>
+		<script src="js/jquery-3.4.1.min.js"></script>
+		<script src="js/echarts.min.js"></script>
+		<script src="js/layui.js" charset="utf-8"></script>
+		<script>
+			var url = "127.0.0.1:6699";
+			var now = new Date();
+			var u = window.location.href.split('?')[1];
+			if (u == undefined) {
+				u = 'date';
+			}
+			if (u.replace('-', '') == 'date') {
+				$("#text").text('周尾选择');
+				$("#choose").attr('placeholder', 'yyyy-MM-dd');
+			} else if (u.replace('-', '') == 'month') {
+				$("#text").text('月份选择');
+				$("#choose").attr('placeholder', 'yyyy-MM');
+			} else if (u.replace('-', '') == 'year') {
+				$("#text").text('年份选择');
+				$("#choose").attr('placeholder', 'yyyy');
+			}
+			layui.use(function(n) {
+				var layer = layui.layer, laydate = layui.laydate;
+				laydate.render({
+					elem: '#choose',
+					type: u.replace('-', ''),
+					showBottom: false,
+					// value: [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('-'),
+					max: [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('-'),
+					done: (value) => {
+						if (u.indexOf('-') != -1) {
+							type = '-'
+						}
+						else {
+							type = ''
+						}
+						$.ajax({
+							type: "get",
+							async: true,
+							url: "http://" + url + "/chart",
+							data: {
+								time: value,
+								type: type
+							},
+							dataType: "json",
+							crossDomain: true,
+							xhrFields: {
+								withCredentials: true
+							},
+							success: function(data) {
+								echarts.init(document.getElementById('main'), null, {
+									renderer: 'svg'
+								}).setOption(data);
+							},
+							error: function(err) {
+								layer.msg(err.responseText, {
+									icon: 2
+								});
+							}
+						})
+					}
+				});
+			})
+		</script>
+	</body>
+</html>

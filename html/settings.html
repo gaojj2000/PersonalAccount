@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>设置面板</title>
+		<link rel="stylesheet" href="css/layui.css" />
+		<link rel="stylesheet" href="css/modules/layer/default/layer.css" />
+	</head>
+	<body>
+		<form class="layui-form" onsubmit="return false;" style="width: 400px;margin: 100px auto;">
+			<div class="layui-form-item">
+				<label class="layui-form-label">姓名</label>
+				<div class="layui-input-inline">
+					<input id="name" class="layui-input" lay-verify="required" name="name" placeholder="">
+				</div>
+			</div>
+			<div class="layui-form-item" style="position: relative;padding-left: 8px;">
+				<label class="layui-form-label" style="padding: 10px;">密码</label>
+				<div class="layui-input-inline">
+					<input id="password" type="password" class="layui-input" lay-verify="required|password" name="password" placeholder="">
+				</div>
+				<span style="position: absolute;z-index: 1;left: 275px;top: 10px;"><a class="layui-icon layui-icon-password" href="javascript:show();"></a></span>
+			</div>
+			<div class="layui-form-item">
+				<label class="layui-form-label">关系</label>
+				<div class="layui-input-inline">
+					<input id="relation" class="layui-input" lay-verify="required" name="relation" placeholder="">
+				</div>
+			</div>
+			<div class="layui-form-item">
+				<div class="layui-input-block">
+					<button type="submit" class="layui-btn layui-btn-radius" lay-submit="" lay-filter="change">保存修改</button>
+				</div>
+			</div>
+		</form>
+		<script src="js/jquery-3.4.1.min.js"></script>
+		<script src="js/layui.js" charset="utf-8"></script>
+		<script>
+			var url = "127.0.0.1:6699";
+			function show() {
+				if ($("#password").attr("type") == 'text') {
+					$("#password").attr("type", "password");
+				}
+				else {
+					$("#password").attr("type", "text");
+				}
+			}
+			layui.use(function(n) {
+				var layer = layui.layer, form = layui.form;
+				$.ajax({
+					type: "get",
+					async: true,
+					url: "http://" + url + "/names",
+					dataType: "json",
+					crossDomain: true,
+					xhrFields: {
+						withCredentials: true
+					},
+					success: function(data) {
+						if (eval(data).code) {
+							$('#name').val(eval(data).res.name);
+							$('#password').val(eval(data).res.password);
+							$('#relation').val(eval(data).res.relation);
+						} else {
+							layer.msg(eval(data).res, {
+								time: 1000,
+								icon: 2
+							});
+						}
+					},
+					error: function(err) {
+						layer.msg(err.responseText, {
+							time: 1000,
+							icon: 2
+						});
+					}
+				});
+				form.verify({
+					password: [
+						/^[0-9a-zA-Z_]{6,12}$/, '密码必须6到12位数字、字母、下划线，不能有其他字符'
+					]
+				});
+				form.on('submit(change)', function(data) {
+					$.ajax({
+						type: "post",
+						async: true,
+						url: "http://" + url + "/change",
+						data: JSON.stringify(data.field),
+						dataType: "json",
+						contentType: 'application/json;charset=UTF-8',
+						crossDomain: true,
+						xhrFields: {
+							withCredentials: true
+						},
+						success: function(data) {
+							if (eval(data).code) {
+								layer.msg(eval(data).res, {
+									time: 1000,
+									icon: 1
+								});
+								setTimeout('parent.location.reload();', 1000);
+							} else {
+								layer.msg(eval(data).res, {
+									time: 1000,
+									icon: 2
+								});
+							}
+						},
+						error: function(err) {
+							layer.msg(err.responseText, {
+								icon: 2
+							});
+						}
+					})
+				});
+			})
+		</script>
+	</body>
+</html>

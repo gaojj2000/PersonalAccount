@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>信息查询面板</title>
+		<link rel="stylesheet" href="css/layui.css" />
+		<link rel="stylesheet" href="css/modules/layer/default/layer.css" />
+		<link rel="stylesheet" href="css/modules/laydate/default/laydate.css" />
+		<style>
+			html, body {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				padding: 0;
+			}
+
+			.laydate-time-list {
+				padding-bottom: 0;
+				overflow: hidden
+			}
+
+			.laydate-time-list>li {
+				width: 50% !important;
+			}
+
+			.laydate-time-list>li:last-child {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<form class="layui-form" onsubmit="return false;" style="width: 400px;margin: 0;padding-top: 40px;position: absolute;z-index: 1;">
+			<div class="layui-form-item">
+				<label class="layui-form-label">人员</label>
+				<div class="layui-input-inline">
+					<select name="person" lay-verify="required" lay-search="" id="option">
+						<option value="">直接选择或搜索选择</option>
+					</select>
+				</div>
+				<input type="hidden" class="layui-input" lay-verify="required" name="person" placeholder="" id="option_">
+			</div>
+			<div class="layui-form-item" style="padding: 0 50px;">
+				<input type="checkbox" name="io" lay-skin="switch" lay-text="收入|支出">
+				<div class="layui-unselect layui-form-switch" lay-skin="_switch"><em style="padding: 0 10px;">支出</em><i></i></div>
+				<input type="checkbox" name="dt[date]" title="日期" checked="">
+				<div class="layui-unselect layui-form-checkbox"><span>日期</span><i class="layui-icon layui-icon-ok" lay-filter="search"></i></div>
+				<input type="checkbox" name="dt[time]" title="时间" checked="">
+				<div class="layui-unselect layui-form-checkbox"><span>时间</span><i class="layui-icon layui-icon-ok" lay-filter="search"></i></div>
+			</div>
+			<div class="layui-form-item" style="padding: 0 40px;">
+				<div class="layui-inline" id="choose1"></div>
+				<input type="hidden" name="date" id="date" value="">
+			</div>
+			<div class="layui-form-item" style="padding: 0 40px;">
+				<div class="layui-inline" id="choose2"></div>
+				<input type="hidden" name="time" id="time" value="">
+			</div>
+			<div class="layui-form-item">
+				<div class="layui-input-block">
+					<button type="submit" class="layui-btn layui-btn-radius" lay-submit="" lay-filter="search">查询</button>
+				</div>
+			</div>
+		</form>
+		<div style="float: left;top: 0;width: 100%;height: 100%;position: absolute;">
+			<div style="padding-left: 400px;width: auto;height: 100%;" id="main"></div>
+		</div>
+		<script src="js/jquery-3.4.1.min.js"></script>
+		<script src="js/echarts.min.js"></script>
+		<script src="js/layui.js" charset="utf-8"></script>
+		<script>
+			var url = "127.0.0.1:6699";
+			var now = new Date();
+			function dateFormat(fmt, date) {
+				let ret;
+				const opt = {
+					"Y+": date.getFullYear().toString(),
+					"m+": (date.getMonth() + 1).toString(),
+					"d+": date.getDate().toString(),
+					"H+": date.getHours().toString(),
+					"M+": date.getMinutes().toString(),
+					"S+": date.getSeconds().toString()
+				};
+				for (let k in opt) {
+					ret = new RegExp("(" + k + ")").exec(fmt);
+					if (ret) {
+						fmt = fmt.replace(ret[1], (ret[1].length == 1) ? (opt[k]) : (opt[k].padStart(ret[1].length, "0")))
+					};
+				};
+				return fmt;
+			}
+			$('#date').val(dateFormat("YYYY-mm-dd", now));
+			$('#time').val(dateFormat("HH:MM", now));
+			$.ajax({
+				type: "get",
+				async: true,
+				url: "http://" + url + "/names",
+				dataType: "json",
+				crossDomain: true,
+				xhrFields: {
+					withCredentials: true
+				},
+				success: function(data) {
+					if (eval(data).code) {
+						$('#option').html('<option value="' + eval(data).res.index + '">' + eval(data).res.name + '</option>');
+						$('#option_').val(eval(data).res.index);
+						$("#option").attr("disabled", "");
+					} else {
+						layer.msg(eval(data).res, {
+							time: 1000,
+							icon: 2
+						});
+					}
+				},
+				error: function(err) {
+					layer.msg(err.responseText, {
+						icon: 2
+					});
+				}
+			})
+			layui.use(function(n) {
+				var layer = layui.layer, laydate = layui.laydate, form = layui.form;
+				laydate.render({
+					elem: '#choose1',
+					type: 'date',
+					position: 'static',
+					showBottom: false,
+					value: new Date(),
+					format: 'yyyy-MM-dd',
+					trigger: 'click',
+					change: (value) => {
+						$('#date').val(value);
+					}
+				});
+				laydate.render({
+					elem: '#choose2',
+					type: 'time',
+					position: 'static',
+					showBottom: false,
+					value: new Date(),
+					format: 'HH:mm',
+					trigger: 'click',
+					change: (value) => {
+						$('#time').val(value);
+					}
+				});
+				form.on('submit(search)', function(data) {
+					console.log(data.field)
+					$.ajax({
+						type: "post",
+						async: true,
+						url: "http://" + url + "/search",
+						data: JSON.stringify(data.field),
+						dataType: "json",
+						contentType: 'application/json;charset=UTF-8',
+						crossDomain: true,
+						xhrFields: {
+							withCredentials: true
+						},
+						success: function(data) {
+							echarts.init(document.getElementById('main'), null, {
+								renderer: 'svg'
+							}).setOption(data);
+						},
+						error: function(err) {
+							layer.msg(err.responseText, {
+								icon: 2
+							});
+						}
+					})
+				});
+			})
+		</script>
+	</body>
+</html>
