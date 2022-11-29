@@ -61,15 +61,32 @@
 				</div>
 			</div>
 		</form>
-		<div style="float: left;top: 0;width: 100%;height: 100%;position: absolute;">
-			<div style="padding-left: 400px;width: auto;height: 100%;" id="main"></div>
+		<div style="float: left;top: 0;width: 100%;height: 100%;position: absolute;margin-bottom: 44px;">
+			<div class="layui-tab" lay-filter="add" style="padding-left: 400px;width: auto;height: 722px;">
+				<ul class="layui-tab-title" style="width: 200px;margin: 0;padding: 0 520px;">
+					<li class="layui-this" lay-id="general">概览图</li>
+					<li id="detail" lay-id="detail">详细表</li>
+				</ul>
+				<div class="layui-tab-content" style="width: 1087px;height: 100%;padding: 0;margin: 0 auto;">
+					<div class="layui-tab-item layui-show" style="width: auto;height: 100%;">
+						<div id="main" style="width: auto;height: 100%;"></div>
+					</div>
+					<div class="layui-tab-item" style="width: 1087px;bottom: 44px;">
+						<table cellspacing="0" cellpadding="0" border="0" class="layui-table" lay-filter="person" id="person"></table>
+					</div>
+				</div>
+			</div>
 		</div>
 		<script src="js/jquery-3.4.1.min.js"></script>
 		<script src="js/echarts.min.js"></script>
 		<script src="js/layui.js" charset="utf-8"></script>
+		<script type="text/html" id="toolbar">
+			<a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+		</script>
 		<script>
 			var url = "127.0.0.1:6699";
 			var now = new Date();
+			var tables, new_table, n, t;
 			function dateFormat(fmt, date) {
 				let ret;
 				const opt = {
@@ -118,7 +135,7 @@
 				}
 			})
 			layui.use(function(n) {
-				var layer = layui.layer, laydate = layui.laydate, form = layui.form;
+				var layer = layui.layer, laydate = layui.laydate, form = layui.form, table = layui.table;
 				laydate.render({
 					elem: '#choose1',
 					type: 'date',
@@ -144,7 +161,6 @@
 					}
 				});
 				form.on('submit(search)', function(data) {
-					console.log(data.field)
 					$.ajax({
 						type: "post",
 						async: true,
@@ -157,16 +173,240 @@
 							withCredentials: true
 						},
 						success: function(data) {
-							echarts.init(document.getElementById('main'), null, {
-								renderer: 'svg'
-							}).setOption(data);
+							echarts.init(document.getElementById('main'), null, {renderer: 'svg'}).setOption(data.chart);
+							$('#detail').text(data.q + "详细表");
+							t = data.q;
+							data = data.table;
+							tables = data;
+							table.render({
+								height: 'full-111',
+								elem: '#person',
+								title: '信息查询面板',
+								limit: data.length + 1,
+								page: {
+									theme: '#1E9FFF',
+									layout: ['prev', 'page', 'next', 'skip', 'count', 'limit'],
+									limit: 15,
+									limits: [15, 30, 45, 60, 75, 90],
+									groups: 2,
+									first: '首页',
+									last: '尾页'
+								},
+								cols: [
+									[{
+										field: 'date',
+										title: '日期',
+										width: 200,
+										style: 'font-size: 12px; color: #666; text-align: center;',
+										event: 'date'
+									},
+									{
+										field: 'person',
+										title: '人员',
+										width: 200,
+										style: 'font-size: 12px; color: #666; text-align: center;'
+									},
+									{
+										field: 'price',
+										title: '价格',
+										width: 200,
+										style: 'font-size: 12px; color: #666; text-align: center;',
+										event: 'price'
+									},
+									{
+										field: 'type',
+										title: '类型',
+										width: 200,
+										style: 'font-size: 12px; color: #666; text-align: center;',
+										event: 'type'
+									},
+									{
+										field: 'note',
+										title: '备注',
+										width: 200,
+										style: 'font-size: 12px; color: #666; text-align: center;',
+										event: 'note'
+									},
+									{
+										fixed: 'right',
+										title: '操作',
+										toolbar: '#toolbar',
+										width: 80
+									}]
+								],
+								cellMaxWidth: 100,
+								parseData: function(res) {
+									return res;
+								},
+								data: data,
+								id: 'person'
+							});
 						},
 						error: function(err) {
 							layer.msg(err.responseText, {
 								icon: 2
 							});
 						}
-					})
+					});
+				});
+				table.on('tool(person)', function(obj) {
+					var data = obj.data;
+					var user = {};
+					if (obj.event === 'date') {
+						layer.prompt({
+							formType: 0,
+							title: '日期时间模糊查询',
+							value: data.date
+						}, function(value, index) {
+							layer.close(index);
+							new_table = [];
+							n = 0
+							for (var t = 0;t < tables.length;t++){
+								if (tables[t].date.toString().indexOf(value) != -1){
+									new_table[n] = tables[t];
+									n++;
+								}
+							}
+							if (!new_table.length){
+								layer.msg('未搜寻到日期 ' + value + ' ！', {
+									icon: 2
+								});
+								new_table = tables;
+							}
+							table.reload('person', {
+								page: {
+									curr: 1
+								},
+								data: new_table
+							});
+						});
+					}
+					else if (obj.event === 'price') {
+						layer.prompt({
+							formType: 0,
+							title: '价格模糊查询',
+							value: data.price
+						}, function(value, index) {
+							layer.close(index);
+							new_table = [];
+							n = 0
+							for (var t = 0;t < tables.length;t++){
+								if (tables[t].price.toString().indexOf(value) != -1){
+									new_table[n] = tables[t];
+									n++;
+								}
+							}
+							if (!new_table.length){
+								layer.msg('未搜寻到价格 ' + value + ' ！', {
+									icon: 2
+								});
+								new_table = tables;
+							}
+							table.reload('person', {
+								page: {
+									curr: 1
+								},
+								data: new_table
+							});
+						});
+					}
+					else if (obj.event === 'type') {
+						layer.prompt({
+							formType: 0,
+							title: '类型模糊查询',
+							value: data.type
+						}, function(value, index) {
+							layer.close(index);
+							new_table = [];
+							n = 0
+							for (var t = 0;t < tables.length;t++){
+								if (tables[t].type.toString().indexOf(value) != -1){
+									new_table[n] = tables[t];
+									n++;
+								}
+							}
+							if (!new_table.length){
+								layer.msg('未搜寻到类型 ' + value + ' ！', {
+									icon: 2
+								});
+								new_table = tables;
+							}
+							table.reload('person', {
+								page: {
+									curr: 1
+								},
+								data: new_table
+							});
+						});
+					}
+					else if (obj.event === 'note') {
+						layer.prompt({
+							formType: 0,
+							title: '备注模糊查询',
+							value: data.note
+						}, function(value, index) {
+							layer.close(index);
+							new_table = [];
+							n = 0
+							for (var t = 0;t < tables.length;t++){
+								if (tables[t].note.toString().indexOf(value) != -1){
+									new_table[n] = tables[t];
+									n++;
+								}
+							}
+							if (!new_table.length){
+								layer.msg('未搜寻到备注 ' + value + ' ！', {
+									icon: 2
+								});
+								new_table = tables;
+							}
+							table.reload('person', {
+								page: {
+									curr: 1
+								},
+								data: new_table
+							});
+						});
+					}
+					else if (obj.event === 'del') {
+						layer.confirm('确认删除 [' + data.date + '] 这条数据？', function(index) {
+							layer.close(index);
+							$.ajax({
+								type: "get",
+								async: true,
+								url: "http://" + url + "/del_date",
+								data: {
+									t: t,
+									date: data.date,
+									person: data.person
+								},
+								dataType: "json",
+								crossDomain: true,
+								xhrFields: {
+									withCredentials: true
+								},
+								success: function(data) {
+									if (eval(data).code) {
+										layer.msg(eval(data).res, {
+											time: 1000,
+											icon: 1
+										});
+										obj.del();
+									} else {
+										layer.msg(eval(data).res, {
+											time: 1000,
+											icon: 2
+										});
+									}
+								},
+								error: function(err) {
+									layer.msg(err.responseText, {
+										icon: 2
+									});
+								}
+							})
+						});
+					}
 				});
 			})
 		</script>

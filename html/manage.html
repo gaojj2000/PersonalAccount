@@ -11,8 +11,7 @@
 			<center>
 				<h1>姓名和关系列可以修改内容哦~</h1>
 			</center>
-			<table cellspacing="0" cellpadding="0" border="0" class="layui-table" lay-filter="person" id="person">
-			</table>
+			<table cellspacing="0" cellpadding="0" border="0" class="layui-table" lay-filter="person" id="person"></table>
 			<center><button class="layui-btn" onclick="np()">增加成员</button></center>
 		</div>
 		<script src="js/jquery-3.4.1.min.js"></script>
@@ -44,6 +43,7 @@
 						withCredentials: true
 					},
 					success: function(data) {
+						console.log(data);
 						table.render({
 							elem: '#person',
 							title: '家庭人员管理',
@@ -51,7 +51,8 @@
 							page: {
 								theme: '#1E9FFF',
 								layout: ['prev', 'page', 'next', 'skip', 'count', 'limit'],
-								limit: 20,
+								limit: 15,
+								limits: [15, 30, 45, 60, 75, 90],
 								groups: 1,
 								first: false,
 								last: false

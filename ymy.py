@@ -1,5 +1,10 @@
 # _*_ coding:utf-8 _*_
+# Project: 
 # FileName: ymy.py
+# UserName: 高俊佶
+# ComputerUser：19305
+# Day: 2021/7/8
+# Time: 22:28
 # IDE: PyCharm
 
 import time
@@ -275,12 +280,12 @@ def login():
     res.set_cookie('user', user)
     return res
 
-@app.route('/names', methods=['get'])
+@app.route('/names', methods=['GET'])
 def names():
     user = flask.request.cookies.get('user', '')
     return flask.jsonify(get_user(user))
 
-@app.route('/chart', methods=['get'])
+@app.route('/chart', methods=['GET'])
 def chart():
     date = flask.request.args.get('time', '')
     zf = flask.request.args.get('type', '')
@@ -303,12 +308,12 @@ def chart():
     dd.update(make_data(*ddd, len(date.replace('-', ''))))
     return flask.jsonify(set_t_chart(dd))
 
-@app.route('/get_users', methods=['get'])
+@app.route('/get_users', methods=['GET'])
 def get_users():
     cursor.execute('select * from person')
     return flask.jsonify({'res': [[_['index'], _['name']]for _ in cursor.fetchall()], 'code': 1})
 
-@app.route('/add', methods=['post'])
+@app.route('/add', methods=['POST'])
 def add():
     res = flask.request.json
     try:
@@ -345,7 +350,7 @@ def search():
     hm = flask.request.json.get('dt[time]', '') and flask.request.json.get('time', '') or 0
     io = flask.request.json.get('io', '') and 1 or 0
     s = ''
-    q = '消费数据'
+    q = '支出数据'
     if hm and date:
         s = str(hm).replace(':', '')
     sql = f'select * from spend where person="{person}"'
@@ -354,16 +359,21 @@ def search():
         sql = f'select * from income where person="{person}"'
     if date:
         sql += f' and date like "{str(date).replace("-", "")}{s}%"'
+    cursor.execute('select * from person')
+    person = {_['index']: _['name'] for _ in cursor.fetchall()}
     cursor.execute(sql)
-    return flask.jsonify(set_b_chart(make_pie(cursor.fetchall()), q))
+    res = cursor.fetchall()
+    si = res and [{__: _[__]for __ in _ if __ not in ['index']} for _ in res] or []
+    si and [_.update({'person': person[_['person']]}) for _ in si]
+    return flask.jsonify({'chart': set_b_chart(make_pie(res), q), 'table': si, 'q': q})
 
-@app.route('/table', methods=['get'])
+@app.route('/table', methods=['GET'])
 def table():
     cursor.execute(f'select * from person')
     person = [{__: _[__]for __ in _ if __ not in ['index', 'password', 'admin']} for _ in cursor.fetchall()]
     return flask.jsonify(person)
 
-@app.route('/name', methods=['post'])
+@app.route('/name', methods=['POST'])
 def name():
     res = flask.request.json
     res = [[_, res[_]]for _ in res][0]
@@ -375,7 +385,7 @@ def name():
         mysql.rollback()
         return flask.jsonify({'res': f'更新用户 {res[0]} 失败！', 'code': 0})
 
-@app.route('/relation', methods=['post'])
+@app.route('/relation', methods=['POST'])
 def relation():
     res = flask.request.json
     res = [[_, res[_]]for _ in res][0]
@@ -387,7 +397,7 @@ def relation():
         mysql.rollback()
         return flask.jsonify({'res': f'更新用户 {res[0]} 失败！', 'code': 0})
 
-@app.route('/del_user', methods=['get'])
+@app.route('/del_user', methods=['GET'])
 def del_user():
     user = flask.request.args.get('user', '')
     if user:
@@ -404,6 +414,26 @@ def del_user():
             mysql.rollback()
             return flask.jsonify({'res': f'删除用户 {user} 失败！', 'code': 0})
     return flask.jsonify({'res': f'用户 {user} 不存在！', 'code': 0})
+
+@app.route('/del_date', methods=['GET'])
+def del_date():
+    t = flask.request.args.get('t', '')
+    date = flask.request.args.get('date', '')
+    person = flask.request.args.get('person', '')
+    cursor.execute('select * from person')
+    person_dict = {_['name']: _['index'] for _ in cursor.fetchall()}
+    try:
+        if t[:2] == '收入':
+            cursor.execute(f'delete from income where date="{date}" and person="{person_dict[person]}"')
+            mysql.commit()
+            return flask.jsonify({'res': f'删除 {t} [ {date} | {person} ] 成功！', 'code': 1})
+        elif t[:2] == '支出':
+            cursor.execute(f'delete from spend where date="{date}" and person="{person_dict[person]}"')
+            mysql.commit()
+            return flask.jsonify({'res': f'删除 {t} [ {date} | {person} ] 成功！', 'code': 1})
+    except:
+        mysql.rollback()
+        return flask.jsonify({'res': f'删除 {t} [ {date} | {person} ] 失败！', 'code': 0})
 
 @app.route('/register', methods=['POST'])
 def register():
